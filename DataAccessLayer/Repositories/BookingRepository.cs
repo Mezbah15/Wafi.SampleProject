@@ -1,0 +1,46 @@
+﻿using DataAccessLayer.Entities;
+using DataAccessLayer.IRepositories;
+using Microsoft.EntityFrameworkCore;
+using Wafi.SampleTest.Dtos;
+
+namespace DataAccessLayer.Repositories
+{
+    public class BookingRepository : IBookingRepository
+    {
+        private readonly WafiDbContext _context;
+
+        public BookingRepository(WafiDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task CreateAsync(Booking booking)
+        {
+            await _context.Bookings.AddAsync(booking);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<bool> IsBookingExists(Guid carId, DateOnly bookingDate, TimeSpan startTime, TimeSpan endTime, RepeatOption repeatOption, DaysOfWeek? days, DateOnly? EndRepeatDate)
+        {
+            var existingBookings = await _context.Bookings.Where(x => x.CarId == carId && x.BookingDate == bookingDate && x.EndTime > startTime && x.StartTime < endTime).ToListAsync();
+
+            foreach(var booking in existingBookings)
+            {
+                if (booking.RepeatOption == RepeatOption.Daily && booking.EndRepeatDate.HasValue)
+                {
+
+                }
+                
+            }
+
+            return existingBookings.Any();
+        }
+
+        public async Task<List<Booking>> GetBookings(BookingFilterDto input)
+        {
+            var bookings = await _context.Bookings.Where(b => b.CarId == input.CarId && b.BookingDate >= input.StartBookingDate && b.BookingDate <= input.EndBookingDate).Include(b => b.Car).ToListAsync();
+
+            return bookings;
+        }
+    }
+}
