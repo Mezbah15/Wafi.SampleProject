@@ -15,6 +15,34 @@ namespace BusinessLayer.Service
         {
             _bookingRepository = repository;
         }
+
+        public List<BookingCalendarDto> ConvertToCalendarView(List<Booking> bookings)
+        {
+            var bookingList = new List<BookingCalendarDto>();
+
+            foreach (var booking in bookings)
+            {
+                int repeatDays = 1;
+
+                if (booking.RepeatOption == RepeatOption.Weekly) repeatDays = 7;
+                else if (booking.RepeatOption == RepeatOption.DoesNotRepeat) booking.EndRepeatDate = booking.BookingDate;
+
+                for (var i = booking.BookingDate; i <= booking.EndRepeatDate; i = i.AddDays(repeatDays))
+                {
+                    var calendarView = new BookingCalendarDto()
+                    {
+                        BookingDate = booking.BookingDate,
+                        StartTime = booking.StartTime,
+                        EndTime = booking.EndTime,
+                    };
+
+                    bookingList.Add(calendarView);
+                }
+            }
+
+            return bookingList;
+        }
+
         public async Task CreateAsync(Booking booking)
         {
 

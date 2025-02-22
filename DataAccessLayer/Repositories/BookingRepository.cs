@@ -22,18 +22,24 @@ namespace DataAccessLayer.Repositories
 
         public async Task<bool> IsBookingExists(Guid carId, DateOnly bookingDate, TimeSpan startTime, TimeSpan endTime, RepeatOption repeatOption, DaysOfWeek? days, DateOnly? EndRepeatDate)
         {
-            var existingBookings = await _context.Bookings.Where(x => x.CarId == carId && x.BookingDate == bookingDate && x.EndTime > startTime && x.StartTime < endTime).ToListAsync();
 
-            foreach(var booking in existingBookings)
+            if (repeatOption == RepeatOption.DoesNotRepeat)
             {
-                if (booking.RepeatOption == RepeatOption.Daily && booking.EndRepeatDate.HasValue)
-                {
+                var existingBookings = await _context.Bookings.AnyAsync(x => x.CarId == carId && x.BookingDate == bookingDate && x.EndTime > startTime && x.StartTime < endTime);
 
-                }
-                
+                return existingBookings;
             }
 
-            return existingBookings.Any();
+            else if (repeatOption == RepeatOption.Daily)
+            {
+                var existingBookings = await _context.Bookings.Where(x => x.CarId == carId &&
+                ((x.RepeatOption == RepeatOption.Daily && x.BookingDate <= bookingDate && x.EndRepeatDate >= bookingDate && x.EndTime > startTime && x.StartTime < endTime)
+                || (x.RepeatOption == RepeatOption.DoesNotRepeat && x.BookingDate == bookingDate && x.EndTime > startTime && x.StartTime < endTime))).ToListAsync();
+
+                return existingBookings.Any();
+            }
+
+            return ;
         }
 
         public async Task<List<Booking>> GetBookings(BookingFilterDto input)

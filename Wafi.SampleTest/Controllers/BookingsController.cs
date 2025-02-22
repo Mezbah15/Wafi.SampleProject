@@ -19,26 +19,15 @@ namespace Wafi.SampleTest.Controllers
 
         // GET: api/Bookings
         [HttpGet("Booking")]
-        public async Task<IEnumerable<BookingCalendarDto>> GetCalendarBookings(BookingFilterDto input)
+        public async Task<IEnumerable<BookingCalendarDto>> GetCalendarBookings([FromQuery] BookingFilterDto input)
         {
             // Get booking from the database and filter the data
             var bookings = await _bookingService.GetBookings(input);
 
+
             // TO DO: convert the database bookings to calendar view (date, start time, end time). Consiser NoRepeat, Daily and Weekly options
 
-            var bookingList = new List<BookingCalendarDto>();
-
-            foreach (var booking in bookings)
-            {
-                var calendarView = new BookingCalendarDto()
-                {
-                     BookingDate = booking.BookingDate,
-                     StartTime = booking.StartTime,
-                     EndTime = booking.EndTime,        
-                };
-
-                bookingList.Add(calendarView);
-            };
+            List<BookingCalendarDto> bookingList = _bookingService.ConvertToCalendarView(bookings);
             
             return bookingList;
         }
@@ -65,7 +54,7 @@ namespace Wafi.SampleTest.Controllers
                     };
                     await _bookingService.CreateAsync(bookings);
                 }
-                
+
                 return Ok(booking);
             }
             catch (Exception e)
@@ -77,7 +66,7 @@ namespace Wafi.SampleTest.Controllers
 
         //GET: api/SeedData
         //For test purpose
-       [HttpGet("SeedData")]
+        [HttpGet("SeedData")]
         //public async Task<IEnumerable<BookingCalendarDto>> GetSeedData()
         //{
         //    var cars = await _bookingService.Cars.ToListAsync();
