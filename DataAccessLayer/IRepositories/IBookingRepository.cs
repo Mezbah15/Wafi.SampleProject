@@ -10,8 +10,8 @@ namespace DataAccessLayer.IRepositories
 {
     public interface IBookingRepository
     {
-        Task<List<Booking>> GetBookings(BookingFilterDto input);
+        Task<List<Booking>> GetBookingsAsync(BookingFilterDto input);
         Task CreateAsync(Booking booking);
-        Task<bool> IsBookingExists(Guid carId, DateOnly bookingDate, TimeSpan startTime, TimeSpan endTime, RepeatOption repeatOption, DaysOfWeek? days, DateOnly? EndRepeatDate);
+        Task<bool> IsBookingExistsAsync(Guid carId, DateOnly bookingDate, TimeSpan startTime, TimeSpan endTime, RepeatOption repeatOption);
     }
 }

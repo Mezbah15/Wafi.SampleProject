@@ -7,6 +7,6 @@ namespace BusinessLayer.IService
     {
         List<BookingCalendarDto> ConvertToCalendarView(List<Booking> bookings);
         Task CreateAsync(Booking booking);
-        Task<List<Booking>> GetBookings(BookingFilterDto input);
+        Task<List<Booking>> GetBookingsAsync(BookingFilterDto input);
     }  
 }

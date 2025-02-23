@@ -16,6 +16,54 @@ namespace BusinessLayer.Service
             _bookingRepository = repository;
         }
 
+        public async Task CreateAsync(Booking booking)
+        {
+            var bookingExist = await _bookingRepository.IsBookingExistsAsync(booking.CarId, booking.BookingDate, booking.StartTime, booking.EndTime, booking.RepeatOption);
+
+            if (bookingExist)
+            {
+                throw new Exception("Already have a Booking. Select Another Date or Time");
+            }
+
+            if (booking.BookingDate >= booking.EndRepeatDate || booking.StartTime >= booking.EndTime)
+            {
+                throw new Exception("Start time must be less than End Repeat Date or Time.");
+            }
+
+            if (booking.RepeatOption == RepeatOption.DoesNotRepeat)
+            {
+                if (booking.EndRepeatDate != null || booking.DaysToRepeatOn != null)
+                {
+                    throw new Exception("For a Single Booking, End Repeat Date and Repeat Days must be null.");
+                }
+            }
+            
+            if (booking.RepeatOption == RepeatOption.Daily)
+            {
+                if (booking.EndRepeatDate == null || booking.DaysToRepeatOn != null)
+                {
+                    throw new Exception("For Daily Repeat Booking, Must have a End Repeat Date and Repeat Days must be null.");
+                }
+            }
+
+            if (booking.RepeatOption == RepeatOption.Weekly)
+            {
+                if (booking.EndRepeatDate == null || booking.DaysToRepeatOn == null)
+                {
+                    throw new Exception("For Weekly Repeat Booking, Must have a End Repeat Date and Mentioned Repeat Days.");
+                }
+            }
+
+            await _bookingRepository.CreateAsync(booking);
+        }
+
+        public async Task<List<Booking>> GetBookingsAsync(BookingFilterDto input)
+        {
+            var bookings = await _bookingRepository.GetBookingsAsync(input);
+
+            return bookings;
+        }
+
         public List<BookingCalendarDto> ConvertToCalendarView(List<Booking> bookings)
         {
             var bookingList = new List<BookingCalendarDto>();
@@ -34,34 +82,14 @@ namespace BusinessLayer.Service
                         BookingDate = booking.BookingDate,
                         StartTime = booking.StartTime,
                         EndTime = booking.EndTime,
+                        CarModel = booking.Car.Model
                     };
 
-                    bookingList.Add(calendarView);
+                     bookingList.Add(calendarView);
                 }
             }
 
             return bookingList;
-        }
-
-        public async Task CreateAsync(Booking booking)
-        {
-
-            var bookingExist = await _bookingRepository.IsBookingExists(booking.CarId, booking.BookingDate, booking.StartTime, booking.EndTime, booking.RepeatOption, booking.DaysToRepeatOn, booking.EndRepeatDate);
-
-            if (bookingExist)
- 
-            {
-                throw new Exception("Already have a Booking. Select Another Date or Time");
-            }
-
-            await _bookingRepository.CreateAsync(booking);
-        }
-
-        public async Task<List<Booking>> GetBookings(BookingFilterDto input)
-        {
-            var bookings = await _bookingRepository.GetBookings(input);
-
-            return bookings;
         }
     }
 }

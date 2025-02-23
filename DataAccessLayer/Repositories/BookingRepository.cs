@@ -20,29 +20,32 @@ namespace DataAccessLayer.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<bool> IsBookingExists(Guid carId, DateOnly bookingDate, TimeSpan startTime, TimeSpan endTime, RepeatOption repeatOption, DaysOfWeek? days, DateOnly? EndRepeatDate)
+        public async Task<bool> IsBookingExistsAsync(Guid carId, DateOnly bookingDate, TimeSpan startTime, TimeSpan endTime, RepeatOption repeatOption)
         {
+            var bookings = await _context.Bookings.Where(x => x.CarId == carId && ((x.RepeatOption == RepeatOption.DoesNotRepeat && x.BookingDate == bookingDate) || (x.RepeatOption != RepeatOption.DoesNotRepeat && x.EndRepeatDate >= bookingDate))).ToListAsync();
 
-            if (repeatOption == RepeatOption.DoesNotRepeat)
-            {
-                var existingBookings = await _context.Bookings.AnyAsync(x => x.CarId == carId && x.BookingDate == bookingDate && x.EndTime > startTime && x.StartTime < endTime);
+            var IsExist = bookings.Any(x =>
+               (x.RepeatOption == RepeatOption.DoesNotRepeat
+                   && x.BookingDate == bookingDate
+                   && x.EndTime > startTime
+                   && x.StartTime < endTime)
+               || (x.RepeatOption == RepeatOption.Daily
+                   && x.BookingDate <= bookingDate 
+                   && x.EndRepeatDate >= bookingDate 
+                   && x.EndTime > startTime
+                   && x.StartTime < endTime) 
+               || (x.RepeatOption == RepeatOption.Weekly
+                   && x.BookingDate.DayOfWeek == bookingDate.DayOfWeek 
+                   && x.BookingDate <= bookingDate
+                   && x.EndRepeatDate >= bookingDate
+                   && x.EndTime > startTime
+                   && x.StartTime < endTime) 
+           );
 
-                return existingBookings;
-            }
-
-            else if (repeatOption == RepeatOption.Daily)
-            {
-                var existingBookings = await _context.Bookings.Where(x => x.CarId == carId &&
-                ((x.RepeatOption == RepeatOption.Daily && x.BookingDate <= bookingDate && x.EndRepeatDate >= bookingDate && x.EndTime > startTime && x.StartTime < endTime)
-                || (x.RepeatOption == RepeatOption.DoesNotRepeat && x.BookingDate == bookingDate && x.EndTime > startTime && x.StartTime < endTime))).ToListAsync();
-
-                return existingBookings.Any();
-            }
-
-            return ;
+           return IsExist;
         }
 
-        public async Task<List<Booking>> GetBookings(BookingFilterDto input)
+        public async Task<List<Booking>> GetBookingsAsync(BookingFilterDto input)
         {
             var bookings = await _context.Bookings.Where(b => b.CarId == input.CarId && b.BookingDate >= input.StartBookingDate && b.BookingDate <= input.EndBookingDate).Include(b => b.Car).ToListAsync();
 

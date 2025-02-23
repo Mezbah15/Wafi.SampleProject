@@ -1,4 +1,5 @@
 ﻿using BusinessLayer.IService;
+using DataAccessLayer;
 using DataAccessLayer.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +11,14 @@ namespace Wafi.SampleTest.Controllers
     [ApiController]
     public class BookingsController : ControllerBase
     {
+        private readonly ILogger<BookingsController> _logger;
+        private readonly WafiDbContext _context;
         private readonly IBookingService _bookingService;
 
-        public BookingsController(IBookingService service)
+        public BookingsController(ILogger<BookingsController> logger, WafiDbContext context, IBookingService service)
         {
+            _logger = logger;
+            _context = context;
             _bookingService = service;
         }
 
@@ -22,13 +27,12 @@ namespace Wafi.SampleTest.Controllers
         public async Task<IEnumerable<BookingCalendarDto>> GetCalendarBookings([FromQuery] BookingFilterDto input)
         {
             // Get booking from the database and filter the data
-            var bookings = await _bookingService.GetBookings(input);
-
+            var bookings = await _bookingService.GetBookingsAsync(input);
 
             // TO DO: convert the database bookings to calendar view (date, start time, end time). Consiser NoRepeat, Daily and Weekly options
-
             List<BookingCalendarDto> bookingList = _bookingService.ConvertToCalendarView(bookings);
-            
+
+
             return bookingList;
         }
 
@@ -55,72 +59,76 @@ namespace Wafi.SampleTest.Controllers
                     await _bookingService.CreateAsync(bookings);
                 }
 
+                _logger.LogInformation($" This {booking.CarId} Car has a Booking Request on {booking.BookingDate}!");
                 return Ok(booking);
             }
             catch (Exception e)
             {
-
+                _logger.LogError($"An Error {e.Message} Occured During a Booking Request");
                 return StatusCode(500, new { message = e.Message });
             }
         }
 
-        //GET: api/SeedData
-        //For test purpose
+
+        /* This section unchanged. 
+         GET: api/SeedData
+         For test purpose
+         */
         [HttpGet("SeedData")]
-        //public async Task<IEnumerable<BookingCalendarDto>> GetSeedData()
-        //{
-        //    var cars = await _bookingService.Cars.ToListAsync();
+        public async Task<IEnumerable<BookingCalendarDto>> GetSeedData()
+        {
+            var cars = await _context.Cars.ToListAsync();
 
-        //    if (!cars.Any())
-        //    {
-        //        cars = GetCars().ToList();
-        //        await _bookingService.Cars.AddRangeAsync(cars);
-        //        await _bookingService.SaveChangesAsync();
-        //    }
+            if (!cars.Any())
+            {
+                cars = GetCars().ToList();
+                await _context.Cars.AddRangeAsync(cars);
+                await _context.SaveChangesAsync();
+            }
 
-        //    var bookings = await _bookingService.Bookings.ToListAsync();
+            var bookings = await _context.Bookings.ToListAsync();
 
-        //    if (!bookings.Any())
-        //    {
-        //        bookings = GetBookings().ToList();
+            if (!bookings.Any())
+            {
+                bookings = GetBookings().ToList();
 
-        //        await _bookingService.Bookings.AddRangeAsync(bookings);
-        //        await _bookingService.SaveChangesAsync();
-        //    }
+                await _context.Bookings.AddRangeAsync(bookings);
+                await _context.SaveChangesAsync();
+            }
 
-        //    var calendar = new Dictionary<DateOnly, List<Booking>>();
+            var calendar = new Dictionary<DateOnly, List<Booking>>();
 
-        //    foreach (var booking in bookings)
-        //    {
-        //        var currentDate = booking.BookingDate;
-        //        while (currentDate <= (booking.EndRepeatDate ?? booking.BookingDate))
-        //        {
-        //            if (!calendar.ContainsKey(currentDate))
-        //                calendar[currentDate] = new List<Booking>();
+            foreach (var booking in bookings)
+            {
+                var currentDate = booking.BookingDate;
+                while (currentDate <= (booking.EndRepeatDate ?? booking.BookingDate))
+                {
+                    if (!calendar.ContainsKey(currentDate))
+                        calendar[currentDate] = new List<Booking>();
 
-        //            calendar[currentDate].Add(booking);
+                    calendar[currentDate].Add(booking);
 
-        //            currentDate = booking.RepeatOption switch
-        //            {
-        //                RepeatOption.Daily => currentDate.AddDays(1),
-        //                RepeatOption.Weekly => currentDate.AddDays(7),
-        //                _ => booking.EndRepeatDate.HasValue ? booking.EndRepeatDate.Value.AddDays(1) : currentDate.AddDays(1)
-        //            };
-        //        }
-        //    }
+                    currentDate = booking.RepeatOption switch
+                    {
+                        RepeatOption.Daily => currentDate.AddDays(1),
+                        RepeatOption.Weekly => currentDate.AddDays(7),
+                        _ => booking.EndRepeatDate.HasValue ? booking.EndRepeatDate.Value.AddDays(1) : currentDate.AddDays(1)
+                    };
+                }
+            }
 
-        //    List<BookingCalendarDto> result = new List<BookingCalendarDto>();
+            List<BookingCalendarDto> result = new List<BookingCalendarDto>();
 
-        //    foreach (var item in calendar)
-        //    {
-        //        foreach (var booking in item.Value)
-        //        {
-        //            result.Add(new BookingCalendarDto { BookingDate = booking.BookingDate, CarModel = booking.Car.Model, StartTime = booking.StartTime, EndTime = booking.EndTime });
-        //        }
-        //    }
+            foreach (var item in calendar)
+            {
+                foreach (var booking in item.Value)
+                {
+                    result.Add(new BookingCalendarDto { BookingDate = booking.BookingDate, CarModel = booking.Car.Model, StartTime = booking.StartTime, EndTime = booking.EndTime });
+                }
+            }
 
-        //    return result;
-        //}
+            return result;
+        }
 
         #region Sample Data
 
